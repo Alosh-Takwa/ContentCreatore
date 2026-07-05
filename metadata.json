@@ -1,0 +1,6 @@
+{
+  "name": "Smart Social Media Content Planner",
+  "description": "مخطط ومولد محتوى تسويقي لـ 30 يوماً لمنصات التواصل الاجتماعي بالذكاء الاصطناعي، يحلل صور المنتجات والجمهور ويطبق الهياكل الفيروسية الأكثر فاعلية.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
