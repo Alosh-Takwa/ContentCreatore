@@ -21,7 +21,9 @@ import {
   Youtube,
   Facebook,
   Instagram,
-  Compass
+  Compass,
+  Trash2,
+  UploadCloud
 } from 'lucide-react';
 import { BrandProfile, DayPlan, GeneratedContent } from '../types';
 
@@ -30,6 +32,7 @@ interface ContentGeneratorProps {
   profile: BrandProfile;
   customViralPosts: string[];
   onContentGenerated: (day: number, content: GeneratedContent) => void;
+  onUpdateDayPlanImage: (day: number, imageBase64: string | undefined) => void;
   onClose: () => void;
 }
 
@@ -38,12 +41,26 @@ export default function ContentGenerator({
   profile, 
   customViralPosts, 
   onContentGenerated, 
+  onUpdateDayPlanImage,
   onClose 
 }: ContentGeneratorProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'hook' | 'text' | 'structure' | 'shooting' | 'design'>('hook');
   const [copiedText, setCopiedText] = useState<string | null>(null);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          onUpdateDayPlanImage(dayPlan.day, reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
@@ -251,6 +268,98 @@ ${c.imagePrompt}
                 {dayPlan.objective}
               </p>
             </div>
+          </div>
+
+          {/* Day-specific Product Image Selector */}
+          <div className="bg-white border border-slate-150 rounded-2xl p-4.5 space-y-4 shadow-sm text-right">
+            <div className="flex items-center justify-between">
+              <h4 className="text-xs font-black text-slate-700 flex items-center gap-1.5">
+                <ImageIcon className="h-4 w-4 text-emerald-500" />
+                تخصيص صورة المنتج لليوم {dayPlan.day}
+              </h4>
+              {dayPlan.selectedImage && (
+                <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2.5 py-0.5 rounded-full flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  مخصصة لهذا اليوم
+                </span>
+              )}
+            </div>
+
+            {dayPlan.selectedImage ? (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-slate-50/70 p-3 rounded-xl border border-slate-100">
+                <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-slate-200 bg-white flex-shrink-0">
+                  <img 
+                    src={dayPlan.selectedImage} 
+                    alt={`Product for Day ${dayPlan.day}`}
+                    className="w-full h-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
+                </div>
+                <div className="flex-1 space-y-1.5">
+                  <p className="text-xs font-bold text-slate-800">جاهز للتوليد الذكي بالصورة المحددة!</p>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    سيقوم نموذج الذكاء الاصطناعي بتحليل شكل ولون وخصائص هذا المنتج المرفق لدمجها بذكاء في الهوك، الكابشن، وتوليد البرومت الفيروسي الدقيق لـ Midjourney/DALL-E.
+                  </p>
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => onUpdateDayPlanImage(dayPlan.day, undefined)}
+                      className="text-[11px] font-bold text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      إلغاء الصورة المخصصة
+                    </button>
+                    {dayPlan.content && (
+                      <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded-lg font-bold">
+                        💡 غيّرت الصورة؟ اضغط بالأسفل لإعادة التوليد لتطبيقها.
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-3.5">
+                <p className="text-[11px] text-slate-400 leading-relaxed">
+                  بشكل افتراضي، يُستخدم المنتج العام للبراند. يمكنك تحديد صورة منتج معينة مخصصة لهذا اليوم فقط، وسيقوم الذكاء الاصطناعي بصياغة النص الإعلاني والبرومت ليتلاءم مع خصائص وشكل هذا المنتج بدقة.
+                </p>
+
+                {/* Grid for Brand Images and Upload Button */}
+                <div className="flex flex-wrap items-center gap-2.5">
+                  {/* Option A: Upload custom file */}
+                  <label className="relative w-20 h-20 rounded-xl border border-dashed border-slate-300 hover:border-emerald-400 bg-slate-50 hover:bg-slate-100 flex flex-col items-center justify-center cursor-pointer transition-all group">
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageUpload} 
+                      className="hidden" 
+                    />
+                    <UploadCloud className="h-5 w-5 text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                    <span className="text-[9px] font-black text-slate-500 mt-1">ارفع صورة</span>
+                  </label>
+
+                  {/* Option B: Choose from existing brand profile images */}
+                  {profile.images && profile.images.map((img, idx) => (
+                    <button
+                      type="button"
+                      key={idx}
+                      onClick={() => onUpdateDayPlanImage(dayPlan.day, img)}
+                      className="relative w-20 h-20 rounded-xl overflow-hidden border border-slate-200 hover:border-emerald-500 hover:scale-105 active:scale-95 transition-all bg-white"
+                      title="اختر من صور البراند"
+                    >
+                      <img 
+                        src={img} 
+                        alt={`Brand product ${idx + 1}`} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                      <div className="absolute inset-0 bg-black/30 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="text-[9px] font-bold text-white bg-slate-900/80 px-1.5 py-0.5 rounded">تحديد</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Error notice */}
@@ -479,24 +588,40 @@ ${c.imagePrompt}
               </div>
 
               {/* Copy all and Download controls */}
-              <div className="flex gap-3">
-                <button
-                  onClick={downloadReport}
-                  className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
-                >
-                  <Download className="h-4 w-4 text-emerald-500" />
-                  تنزيل تقرير اليوم بالكامل (.txt)
-                </button>
-                <button
-                  onClick={() => {
-                    const fullRep = `اليوم: ${dayPlan.day}\nالمنصة: ${dayPlan.platform}\nالعنوان: ${dayPlan.title}\nالخطاف: ${content.hook}\nالكابشن: ${content.caption}\nالنص بالكامل: ${content.fullText}`;
-                    handleCopy(fullRep, 'المنشور كاملاً');
-                  }}
-                  className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
-                >
-                  <Copy className="h-4 w-4 text-emerald-400" />
-                  نسخ كافة تفاصيل المنشور
-                </button>
+              <div className="flex flex-col gap-3">
+                <div className="flex gap-3">
+                  <button
+                    onClick={downloadReport}
+                    className="flex-1 py-3 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2"
+                  >
+                    <Download className="h-4 w-4 text-emerald-500" />
+                    تنزيل تقرير اليوم بالكامل (.txt)
+                  </button>
+                  <button
+                    onClick={() => {
+                      const fullRep = `اليوم: ${dayPlan.day}\nالمنصة: ${dayPlan.platform}\nالعنوان: ${dayPlan.title}\nالخطاف: ${content.hook}\nالكابشن: ${content.caption}\nالنص بالكامل: ${content.fullText}`;
+                      handleCopy(fullRep, 'المنشور كاملاً');
+                    }}
+                    className="flex-1 py-3 bg-slate-900 text-white rounded-xl text-xs font-bold hover:bg-slate-800 transition-all flex items-center justify-center gap-2 shadow-lg shadow-slate-200"
+                  >
+                    <Copy className="h-4 w-4 text-emerald-400" />
+                    نسخ كافة تفاصيل المنشور
+                  </button>
+                </div>
+                {loading ? (
+                  <div className="py-2.5 flex items-center justify-center gap-2 bg-slate-50 border border-slate-150 rounded-xl text-xs font-semibold text-slate-500 animate-pulse">
+                    <div className="w-4 h-4 rounded-full border-2 border-emerald-500 border-t-transparent animate-spin"></div>
+                    جاري تحديث المحتوى الإعلاني بالصورة الجديدة...
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleGenerate}
+                    className="py-2.5 bg-emerald-50 text-emerald-700 border border-emerald-200/60 rounded-xl text-xs font-bold hover:bg-emerald-100/75 transition-all flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5 text-emerald-600" />
+                    إعادة توليد المحتوى الإعلاني بالكامل (لتطبيق الصورة الجديدة) 🔄
+                  </button>
+                )}
               </div>
             </div>
           ) : (

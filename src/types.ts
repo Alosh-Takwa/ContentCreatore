@@ -50,6 +50,7 @@ export interface DayPlan {
   objective: string;
   status: 'pending' | 'generating' | 'completed';
   content?: GeneratedContent;
+  selectedImage?: string; // Day-specific product image base64
 }
 
 export interface ViralFramework {

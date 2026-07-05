@@ -145,13 +145,23 @@ app.post('/api/generate-content', async (req, res) => {
     // Construct the parts array for the generative model
     const contents: any[] = [];
     
-    // Add product images if they exist in the brand profile
-    if (profile.images && profile.images.length > 0) {
-      // Send the first image for analysis
-      const base64Data = profile.images[0].replace(/^data:image\/\w+;base64,/, "");
+    // Choose the specific image for this day or fall back to the first brand profile image
+    let dayImage = dayPlan.selectedImage;
+    if (!dayImage && profile.images && profile.images.length > 0) {
+      dayImage = profile.images[0];
+    }
+
+    if (dayImage) {
+      // Determine correct mimeType if possible, default to image/jpeg
+      let mimeType = 'image/jpeg';
+      const mimeMatch = dayImage.match(/^data:(image\/\w+);base64,/);
+      if (mimeMatch) {
+        mimeType = mimeMatch[1];
+      }
+      const base64Data = dayImage.replace(/^data:image\/\w+;base64,/, "");
       contents.push({
         inlineData: {
-          mimeType: 'image/jpeg',
+          mimeType: mimeType,
           data: base64Data,
         }
       });

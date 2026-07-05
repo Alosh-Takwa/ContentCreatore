@@ -148,6 +148,25 @@ export default function Dashboard({
     }
   };
 
+  const handleUpdateDayPlanImage = (dayNum: number, imageBase64: string | undefined) => {
+    const updatedPlans = daysPlan.map(dp => {
+      if (dp.day === dayNum) {
+        return {
+          ...dp,
+          selectedImage: imageBase64
+        };
+      }
+      return dp;
+    });
+
+    onUpdateCampaignPlan(activeCampaign.id, updatedPlans);
+    
+    // Update active viewed day if it's currently open
+    if (selectedDayPlan && selectedDayPlan.day === dayNum) {
+      setSelectedDayPlan(updatedPlans.find(dp => dp.day === dayNum) || null);
+    }
+  };
+
   const getPlatformIcon = (platform: string) => {
     switch (platform) {
       case 'facebook': return <Facebook className="h-4.5 w-4.5 text-blue-600" />;
@@ -537,6 +556,7 @@ export default function Dashboard({
             profile={profile}
             customViralPosts={customViralPosts}
             onContentGenerated={handleContentGenerated}
+            onUpdateDayPlanImage={handleUpdateDayPlanImage}
             onClose={() => setSelectedDayPlan(null)}
           />
         )}
