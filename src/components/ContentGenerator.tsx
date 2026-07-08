@@ -23,7 +23,9 @@ import {
   Instagram,
   Compass,
   Trash2,
-  UploadCloud
+  UploadCloud,
+  Zap,
+  Sliders
 } from 'lucide-react';
 import { BrandProfile, DayPlan, GeneratedContent } from '../types';
 
@@ -48,6 +50,7 @@ export default function ContentGenerator({
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'hook' | 'text' | 'structure' | 'shooting' | 'design'>('hook');
   const [copiedText, setCopiedText] = useState<string | null>(null);
+  const [contentStyle, setContentStyle] = useState<'detailed' | 'short'>('detailed');
 
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -164,12 +167,20 @@ export default function ContentGenerator({
 ----------------------------------------
 1. الخطاف الجذاب (Hook):
 ----------------------------------------
-${c.hook}
+الخيار الطويل والمفصل:
+"${c.hook}"
+${c.hookShort ? `
+الخيار المختصر والبسيط:
+"${c.hookShort}"` : ''}
 
 ----------------------------------------
 2. كابشن المنشور (Caption):
 ----------------------------------------
+الخيار الطويل والمفصل:
 ${c.caption}
+${c.captionShort ? `
+الخيار المختصر والبسيط:
+${c.captionShort}` : ''}
 
 ----------------------------------------
 3. الهيكلية الإقناعية (Structure):
@@ -452,13 +463,55 @@ ${c.imagePrompt}
                   </div>
                 )}
 
-                {activeTab === 'hook' && (
+                 {activeTab === 'hook' && (
                   <div className="space-y-5">
+                    {/* Mode Selector Option: Detailed vs Short */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-100/80 p-2 rounded-xl border border-slate-200/50">
+                      <span className="text-xs font-black text-slate-700 mr-1 flex items-center gap-1.5">
+                        <Sliders className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                        طول الكابشن والخطاف (خيارات الطول):
+                      </span>
+                      <div className="flex items-center gap-1.5 self-end sm:self-auto bg-slate-200/50 p-0.5 rounded-lg">
+                        <button
+                          type="button"
+                          onClick={() => setContentStyle('detailed')}
+                          className={`px-3 py-1.5 rounded-md text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
+                            contentStyle === 'detailed'
+                              ? 'bg-white text-emerald-700 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          ✍️ طويل ومفصل
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setContentStyle('short')}
+                          className={`px-3 py-1.5 rounded-md text-[11px] font-extrabold flex items-center gap-1.5 cursor-pointer transition-all ${
+                            contentStyle === 'short'
+                              ? 'bg-white text-emerald-700 shadow-sm'
+                              : 'text-slate-500 hover:text-slate-800'
+                          }`}
+                        >
+                          ⚡ مختصر وبسيط
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Notice for older generated posts */}
+                    {contentStyle === 'short' && !content.captionShort && (
+                      <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-900 text-xs font-semibold leading-relaxed">
+                        ⚠️ هذا المنشور تم توليده مسبقاً قبل تحديث ميزة الطول والنمط.
+                        <p className="text-[11px] text-amber-700 mt-1 font-medium">
+                          للحصول على نسخة "مختصرة وبسيطة" لهذا المنشور بدقة عالية، يرجى الضغط على زر <strong>"إعادة توليد المحتوى الإعلاني"</strong> في الأسفل!
+                        </p>
+                      </div>
+                    )}
+
                     {/* Hook element */}
                     <div className="bg-white p-4 rounded-xl border border-dashed border-emerald-500/40 relative">
                       <div className="absolute top-2 left-2 flex gap-1">
                         <button
-                          onClick={() => handleCopy(content.hook, 'الخطاف')}
+                          onClick={() => handleCopy(contentStyle === 'short' && content.hookShort ? content.hookShort : content.hook, 'الخطاف')}
                           className="p-1 bg-slate-50 rounded text-slate-400 hover:text-emerald-600 transition-all"
                           title="نسخ الخطاف"
                         >
@@ -466,10 +519,10 @@ ${c.imagePrompt}
                         </button>
                       </div>
                       <span className="text-[9px] font-black uppercase text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        الخطاف الفيروسي (Hook)
+                        الخطاف الفيروسي (Hook) - {contentStyle === 'short' && content.hookShort ? 'مختصر وبسيط ⚡' : 'طويل ومفصل ✍️'}
                       </span>
                       <p className="text-sm font-bold text-slate-800 mt-2 pr-1 leading-relaxed">
-                        "{content.hook}"
+                        "{contentStyle === 'short' && content.hookShort ? content.hookShort : content.hook}"
                       </p>
                     </div>
 
@@ -477,7 +530,7 @@ ${c.imagePrompt}
                     <div className="bg-white p-4 rounded-xl border border-slate-100 relative">
                       <div className="absolute top-3 left-3 flex gap-1">
                         <button
-                          onClick={() => handleCopy(content.caption, 'الكابشن')}
+                          onClick={() => handleCopy(contentStyle === 'short' && content.captionShort ? content.captionShort : content.caption, 'الكابشن')}
                           className="p-1 bg-slate-50 rounded text-slate-400 hover:text-emerald-600 transition-all"
                           title="نسخ الكابشن"
                         >
@@ -485,10 +538,10 @@ ${c.imagePrompt}
                         </button>
                       </div>
                       <span className="text-[9px] font-black uppercase text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">
-                        كابشن المنشور (Caption)
+                        كابشن المنشور (Caption) - {contentStyle === 'short' && content.captionShort ? 'مختصر وبسيط ⚡' : 'طويل ومفصل ✍️'}
                       </span>
                       <p className="text-xs text-slate-700 mt-3 pr-1 whitespace-pre-wrap leading-relaxed">
-                        {content.caption}
+                        {contentStyle === 'short' && content.captionShort ? content.captionShort : content.caption}
                       </p>
                     </div>
                   </div>

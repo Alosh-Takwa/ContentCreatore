@@ -99,6 +99,12 @@ function generatePrintableHTML(campaign: Campaign) {
               <div class="border border-indigo-100 rounded-2xl p-5 bg-indigo-50/20" style="border: 1px solid #e0e7ff; background-color: #f5f3ff33; padding: 20px; border-radius: 16px;">
                 <h4 class="font-extrabold text-xs text-indigo-700 mb-2" style="color: #4338ca; font-weight: 800; font-size: 12px; margin-bottom: 8px;">⚡ خطاف جذب الانتباه الأولي (Scroll Stopping Hook)</h4>
                 <p class="text-slate-800 font-extrabold text-sm leading-relaxed" style="color: #1e293b; font-weight: 800; font-size: 14px; line-height: 1.625;">${content.hook || ''}</p>
+                ${content.hookShort ? `
+                  <div class="mt-3 pt-3 border-t border-indigo-100/50" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e0e7ff80; text-align: right;">
+                    <span class="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md" style="background-color: #e0e7ff80; color: #4338ca; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">الخيار المختصر وبسيط ⚡</span>
+                    <p class="text-slate-700 font-bold text-xs mt-1.5 leading-relaxed" style="color: #4b5563; font-weight: 700; font-size: 12px; line-height: 1.625; margin-top: 6px;">"${content.hookShort}"</p>
+                  </div>
+                ` : ''}
               </div>
 
               <div class="border border-slate-100 rounded-2xl p-5" style="border: 1px solid #f1f5f9; padding: 20px; border-radius: 16px;">
@@ -109,6 +115,12 @@ function generatePrintableHTML(campaign: Campaign) {
               <div class="border border-emerald-100 rounded-2xl p-5 bg-emerald-50/10" style="border: 1px solid #d1fae5; background-color: #ecfdf51a; padding: 20px; border-radius: 16px;">
                 <h4 class="font-extrabold text-xs text-emerald-700 mb-2" style="color: #047857; font-weight: 800; font-size: 12px; margin-bottom: 8px;">✍️ الكابشن التسويقي المقترح (Caption)</h4>
                 <div class="text-slate-800 text-xs leading-relaxed whitespace-pre-line bg-white p-4 rounded-xl border border-slate-100" style="color: #1e293b; font-size: 12px; line-height: 1.625; white-space: pre-line; background-color: #ffffff; padding: 16px; border-radius: 12px; border: 1px solid #f1f5f9;">${content.caption || ''}</div>
+                ${content.captionShort ? `
+                  <div class="mt-3 pt-3 border-t border-emerald-100/50" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #d1fae580; text-align: right;">
+                    <span class="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md" style="background-color: #ecfdf580; color: #047857; padding: 2px 8px; border-radius: 6px; font-weight: 900; font-size: 10px;">الخيار المختصر وبسيط ⚡</span>
+                    <div class="text-slate-700 text-xs mt-1.5 leading-relaxed whitespace-pre-line bg-white p-3 rounded-lg border border-slate-100" style="color: #4b5563; font-size: 12px; line-height: 1.625; white-space: pre-line; background-color: #ffffff; padding: 12px; border-radius: 8px; border: 1px solid #f1f5f9; margin-top: 6px;">${content.captionShort}</div>
+                  </div>
+                ` : ''}
               </div>
 
               <div class="border border-slate-150 rounded-2xl p-5 bg-slate-50/50" style="border: 1px solid #e2e8f0; background-color: #f8fafc80; padding: 20px; border-radius: 16px;">

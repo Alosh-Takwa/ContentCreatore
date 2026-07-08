@@ -33,7 +33,9 @@ export interface GeneratedContent {
   type: ContentType;
   day?: number;
   hook: string;
+  hookShort?: string;
   caption: string;
+  captionShort?: string;
   structure: string;
   fullText: string;
   shootingGuidelines?: string; // only for videos/reels
