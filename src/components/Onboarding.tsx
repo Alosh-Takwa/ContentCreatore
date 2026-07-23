@@ -16,9 +16,15 @@ import {
   Volume2, 
   FileText,
   HelpCircle,
-  TrendingUp
+  TrendingUp,
+  Facebook,
+  Instagram,
+  Compass,
+  Clapperboard,
+  CheckCircle2
 } from 'lucide-react';
 import { BrandProfile } from '../types';
+import { compressAndResizeImage } from '../utils/imageCompressor';
 
 interface OnboardingProps {
   onComplete: (profile: BrandProfile) => void;
@@ -46,7 +52,9 @@ export default function Onboarding({ onComplete, onCancel }: OnboardingProps) {
     productDescription: '',
     keywords: '',
     images: [],
-    viralReference: ''
+    viralReference: '',
+    selectedPlatforms: ['facebook', 'instagram', 'tiktok'],
+    selectedContentTypes: ['video_script', 'reel_idea', 'static_post']
   });
 
   const [dragActive, setDragActive] = useState(false);
@@ -61,22 +69,44 @@ export default function Onboarding({ onComplete, onCancel }: OnboardingProps) {
     setProfile(prev => ({ ...prev, tone: toneId }));
   };
 
+  const togglePlatform = (platform: 'facebook' | 'instagram' | 'tiktok') => {
+    setProfile(prev => {
+      const current = prev.selectedPlatforms || [];
+      const updated = current.includes(platform)
+        ? current.filter(p => p !== platform)
+        : [...current, platform];
+      if (updated.length === 0) return prev;
+      return { ...prev, selectedPlatforms: updated };
+    });
+  };
+
+  const toggleContentType = (type: 'video_script' | 'reel_idea' | 'static_post') => {
+    setProfile(prev => {
+      const current = prev.selectedContentTypes || [];
+      const updated = current.includes(type)
+        ? current.filter(t => t !== type)
+        : [...current, type];
+      if (updated.length === 0) return prev;
+      return { ...prev, selectedContentTypes: updated };
+    });
+  };
+
   // Image upload helpers
-  const handleFiles = (files: FileList) => {
+  const handleFiles = async (files: FileList) => {
     const validImages = Array.from(files).filter(file => file.type.startsWith('image/'));
     
-    validImages.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          setProfile(prev => ({
-            ...prev,
-            images: [...prev.images, reader.result as string]
-          }));
-        }
-      };
-      reader.readAsDataURL(file);
-    });
+    try {
+      const compressedImages = await Promise.all(
+        validImages.map(file => compressAndResizeImage(file))
+      );
+      
+      setProfile(prev => ({
+        ...prev,
+        images: [...prev.images, ...compressedImages]
+      }));
+    } catch (err: any) {
+      console.error('Error compressing onboarding images:', err);
+    }
   };
 
   const handleDrag = (e: React.DragEvent) => {
@@ -137,7 +167,10 @@ export default function Onboarding({ onComplete, onCancel }: OnboardingProps) {
     if (step === 2) {
       return profile.targetAudience.trim() !== '' && profile.painPoints.trim() !== '';
     }
-    return true; // Step 3 has optional parameters
+    if (step === 3) {
+      return (profile.selectedPlatforms || []).length > 0 && (profile.selectedContentTypes || []).length > 0;
+    }
+    return true;
   };
 
   return (
@@ -351,6 +384,98 @@ export default function Onboarding({ onComplete, onCancel }: OnboardingProps) {
                   الأسلوب الفني ومصادر الإلهام الفايرل
                 </h3>
                 <p className="text-sm text-slate-400">إضافة صور للمنتج لدمج مواصفاته، وتحديد أسلوب الخطاب، وتوفير أمثلة ملهمة.</p>
+              </div>
+
+              {/* Platforms and Content Types selectors */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
+                {/* 1. Target Platforms selection */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
+                    <span className="text-emerald-500">📱</span>
+                    منصات التواصل المستهدفة <span className="text-rose-500">*</span>
+                  </label>
+                  <p className="text-[11px] text-slate-400 mb-3">اختر المنصات التي ترغب بإدارة خطة المحتوى لها بذكاء.</p>
+                  <div className="space-y-2">
+                    {[
+                      { id: 'facebook', name: 'فيسبوك (Facebook)', icon: Facebook, colorClass: 'text-blue-600 bg-blue-50 border-blue-200' },
+                      { id: 'instagram', name: 'انستغرام (Instagram)', icon: Instagram, colorClass: 'text-pink-600 bg-pink-50 border-pink-200' },
+                      { id: 'tiktok', name: 'تيك توك (TikTok)', icon: Compass, colorClass: 'text-slate-800 bg-slate-100 border-slate-300' }
+                    ].map((p) => {
+                      const Icon = p.icon;
+                      const isSelected = profile.selectedPlatforms?.includes(p.id as any);
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => togglePlatform(p.id as any)}
+                          className={`w-full p-3 rounded-xl border flex items-center justify-between text-right transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-50/25 ring-2 ring-emerald-500/10'
+                              : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className={`p-1.5 rounded-lg border ${p.colorClass}`}>
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <span className="text-xs font-bold text-slate-700">{p.name}</span>
+                          </div>
+                          {isSelected ? (
+                            <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border border-slate-300 shrink-0"></div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 2. Content Types selection */}
+                <div>
+                  <label className="block text-sm font-semibold text-slate-800 mb-2 flex items-center gap-1.5">
+                    <span className="text-emerald-500">🎬</span>
+                    أنواع المحتوى المطلوبة <span className="text-rose-500">*</span>
+                  </label>
+                  <p className="text-[11px] text-slate-400 mb-3">اختر أنواع المنشورات والسكريبتات لتنويع استراتيجيتك.</p>
+                  <div className="space-y-2">
+                    {[
+                      { id: 'video_script', name: 'سكريبت فيديو تصوير تفصيلي', icon: Clapperboard, desc: 'سكريبت كامل لليوتيوب، ريلز أو فيديوهات UGC' },
+                      { id: 'reel_idea', name: 'فكرة ريلز وفيديو قصير سريع', icon: Sparkles, desc: 'أفكار سريعة ومثيرة للانتباه ومخصصة للانتشار السريع' },
+                      { id: 'static_post', name: 'منشور بوست ذو صورة ثابتة', icon: FileText, desc: 'كابشن قوي تفصيلي وبيعي مع برومت جاهز لتوليد الصورة' }
+                    ].map((ct) => {
+                      const Icon = ct.icon;
+                      const isSelected = profile.selectedContentTypes?.includes(ct.id as any);
+                      return (
+                        <button
+                          key={ct.id}
+                          type="button"
+                          onClick={() => toggleContentType(ct.id as any)}
+                          className={`w-full p-3 rounded-xl border flex items-center justify-between text-right transition-all cursor-pointer ${
+                            isSelected
+                              ? 'border-emerald-500 bg-emerald-50/25 ring-2 ring-emerald-500/10'
+                              : 'border-slate-200 bg-white hover:bg-slate-50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2.5">
+                            <span className="p-1.5 rounded-lg border border-slate-100 bg-slate-50 text-slate-500">
+                              <Icon className="h-4 w-4" />
+                            </span>
+                            <div className="text-right">
+                              <span className="block text-xs font-bold text-slate-700">{ct.name}</span>
+                              <span className="block text-[10px] text-slate-400 mt-0.5">{ct.desc}</span>
+                            </div>
+                          </div>
+                          {isSelected ? (
+                            <CheckCircle2 className="h-4.5 w-4.5 text-emerald-600 shrink-0" />
+                          ) : (
+                            <div className="h-4 w-4 rounded-full border border-slate-300 shrink-0"></div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
 
               {/* Tone selection */}

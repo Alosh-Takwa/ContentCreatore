@@ -14,6 +14,8 @@ export interface BrandProfile {
   keywords: string;
   images: string[]; // Base64 encoded strings
   viralReference: string;
+  selectedPlatforms?: PlatformType[];
+  selectedContentTypes?: ContentType[];
 }
 
 export interface Campaign {

@@ -28,6 +28,7 @@ import {
   Sliders
 } from 'lucide-react';
 import { BrandProfile, DayPlan, GeneratedContent } from '../types';
+import { compressAndResizeImage } from '../utils/imageCompressor';
 
 interface ContentGeneratorProps {
   dayPlan: DayPlan;
@@ -52,16 +53,20 @@ export default function ContentGenerator({
   const [copiedText, setCopiedText] = useState<string | null>(null);
   const [contentStyle, setContentStyle] = useState<'detailed' | 'short'>('detailed');
 
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        if (typeof reader.result === 'string') {
-          onUpdateDayPlanImage(dayPlan.day, reader.result);
-        }
-      };
-      reader.readAsDataURL(file);
+      setLoading(true);
+      setError(null);
+      try {
+        const compressedBase64 = await compressAndResizeImage(file);
+        onUpdateDayPlanImage(dayPlan.day, compressedBase64);
+      } catch (err: any) {
+        console.error(err);
+        setError(err.message || 'فشل تحميل وضغط الصورة المرفقة. يرجى محاولة صورة أخرى.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 

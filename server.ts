@@ -8,8 +8,53 @@ import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import { GoogleGenAI, Type } from '@google/genai';
 import dotenv from 'dotenv';
+import fs from 'fs';
 
 dotenv.config();
+
+function logToFile(message: string) {
+  try {
+    fs.appendFileSync('/server.log', `[${new Date().toISOString()}] ${message}\n`);
+  } catch (err) {
+    console.error('Failed to write to log file:', err);
+  }
+}
+
+function cleanErrorMessage(err: any): string {
+  if (!err) return 'حدث خطأ غير متوقع.';
+  
+  let msg = err.message || String(err);
+  
+  // Try to parse if it is a stringified JSON (from @google/genai error)
+  if (typeof msg === 'string') {
+    const trimmed = msg.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (parsed.error && parsed.error.message) {
+          msg = parsed.error.message;
+        } else if (parsed.message) {
+          msg = parsed.message;
+        }
+      } catch (e) {
+        // Ignore parsing error
+      }
+    }
+  }
+  
+  // Translate common Gemini/Google API error messages to beautiful Arabic
+  if (msg.includes('experiencing high demand') || msg.includes('503') || msg.includes('UNAVAILABLE')) {
+    return 'خوادم الذكاء الاصطناعي تواجه ضغطاً كبيراً حالياً (503). يرجى الانتظار بضع ثوانٍ وإعادة المحاولة ✨';
+  }
+  if (msg.includes('Quota exceeded') || msg.includes('429') || msg.includes('RESOURCE_EXHAUSTED')) {
+    return 'تم تجاوز الحد الأقصى للطلبات المتاحة حالياً (429). يرجى المحاولة مجدداً بعد دقيقة.';
+  }
+  if (msg.includes('API key not valid')) {
+    return 'مفتاح واجهة برمجة التطبيقات (API Key) غير صالح أو غير مهيأ بشكل صحيح.';
+  }
+  
+  return msg;
+}
 
 const app = express();
 const PORT = 3000;
@@ -26,6 +71,7 @@ const ai = new GoogleGenAI({
     headers: {
       'User-Agent': 'aistudio-build',
     },
+    timeout: 120000, // 2 minutes to prevent fetch failed timeout on large 30-day generations
   },
 });
 
@@ -37,9 +83,24 @@ app.post('/api/generate-plan', async (req, res) => {
       return res.status(400).json({ error: 'ملف البراند مطلوب لتوليد الخطة.' });
     }
 
+    // Extract selected platforms and content types, default to all if empty
+    const selectedPlatforms: string[] = profile.selectedPlatforms && profile.selectedPlatforms.length > 0
+      ? profile.selectedPlatforms
+      : ['facebook', 'instagram', 'tiktok'];
+
+    const selectedContentTypes: string[] = profile.selectedContentTypes && profile.selectedContentTypes.length > 0
+      ? profile.selectedContentTypes
+      : ['static_post', 'reel_idea', 'video_script'];
+
+    const platformsStr = selectedPlatforms.join(', ');
+    const contentTypesStr = selectedContentTypes.join(', ');
+
     const systemInstruction = `أنت خبير تسويق رقمي وكتابة محتوى إعلاني (Copywriter) محترف على مستوى عالمي، متخصص في السوق العربي وبناء الخطط التسويقية لزيادة التفاعل والمبيعات (Viral Marketing).
-مهمتك هي بناء خطة محتوى متكاملة لمدة 30 يوماً متواصلة بناءً على معلومات البراند المقدمة من العميل.
-يجب توزيع الخطة بذكاء وتوازن بين المنصات التالية:
+مهمتك هي بناء خطة محتوى متكاملة لمدة 30 يوماً متواصلة بناءً على معلومات البراند والخيارات المحددة من قبل العميل.
+يجب توزيع الخطة بذكاء وتوازن بين المنصات التالية فقط: ${platformsStr}
+وأنواع المحتوى التالية فقط: ${contentTypesStr}
+
+ملاحظات المنصات:
 - فيسبوك (Facebook): منشورات تفاعلية، منشورات سرد قصصي (Storytelling)، بوستات ثابتة (Static Posts) بكابشن دافئ وبناء مجتمع.
 - انستغرام (Instagram): ريلز (Reels) تفاعلية، منشورات دائرية (Carousel)، صور ثابتة تركز على الجاذبية البصرية وتثقيف العميل.
 - تيك توك (TikTok): ريلز/فيديوهات قصيرة ديناميكية، تحديات، خلف الكواليس، ترندات سريعة تركز على جذب الانتباه في أول ثانيتين.
@@ -60,10 +121,46 @@ app.post('/api/generate-plan', async (req, res) => {
 مراجع إضافية أو منشورات منافسة: ${profile.viralReference || "لا توجد"}
 
 التعليمات الهامة:
-1. وزع الأيام الـ 30 بحيث تغطي المنصات الثلاثة (facebook, instagram, tiktok).
-2. نوع في أنواع المحتوى (static_post, reel_idea, video_script).
+1. وزع الأيام الـ 30 بحيث تغطي المنصات التالية فقط: (${platformsStr}). لا تولد أي يوم خارج هذه المنصات المحددة.
+2. نوع في أنواع المحتوى لتكون حصرًا من الخيارات التالية: (${contentTypesStr}). لا تولد أي يوم بنوع محتوى خارج هذه الأنواع المحددة.
 3. اجعل لكل يوم عنواناً مميزاً (title)، ومفهوماً محدداً ومبتكراً (concept)، وهدفاً واضحاً (objective) مثل زيادة الوعي، جلب المبيعات، تثقيف العميل، زيادة المتابعين.
-4. الخطة يجب أن تكون باللغة العربية بأسلوب جذاب واحترافي يلائم اللهجة المطلوبة وموجه مباشرة لحل المشاكل ونقاط الوجع.`;
+4. الخطة يجب أن تكون باللغة العربية بأسلوب جذاب واحترافي يلائم اللهجة المطلوبة وموجه مباشرة لحل المشاكل ونقاط الوجع.
+5. صِغ المفاهيم (concept) والعناوين والأهداف بأسلوب واضح ومختصر ومركّز جداً (بحدود سطرين أو ثلاثة كحد أقصى لكل حقل) لتفادي الإطالة وضمان سرعة الاستجابة القصوى.`;
+
+    console.log('API schema to send:', JSON.stringify({
+      type: Type.ARRAY,
+      description: "خطة المحتوى المكونة من 30 يوماً لوسائل التواصل الاجتماعي",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          day: {
+            type: Type.INTEGER,
+            description: "رقم اليوم من 1 إلى 30",
+          },
+          platform: {
+            type: Type.STRING,
+            description: `المنصة المستهدفة. يجب أن تكون حصراً واحدة من الخيارات المحددة: ${platformsStr}`,
+          },
+          type: {
+            type: Type.STRING,
+            description: `نوع المحتوى. يجب أن يكون حصراً واحداً من الخيارات المحددة: ${contentTypesStr}`,
+          },
+          title: {
+            type: Type.STRING,
+            description: "عنوان المنشور أو الفكرة الأساسية",
+          },
+          concept: {
+            type: Type.STRING,
+            description: "مفهوم وفكرة المنشور بالتفصيل (ماذا سنقدم في هذا اليوم؟)",
+          },
+          objective: {
+            type: Type.STRING,
+            description: "هدف المنشور (تفاعل، توعية، بيع، تعليم، إلخ)",
+          },
+        },
+        required: ['day', 'platform', 'type', 'title', 'concept', 'objective'],
+      },
+    }, null, 2));
 
     const response = await ai.models.generateContent({
       model: 'gemini-3.5-flash',
@@ -83,11 +180,11 @@ app.post('/api/generate-plan', async (req, res) => {
               },
               platform: {
                 type: Type.STRING,
-                description: "المنصة المستهدفة: facebook أو instagram أو tiktok",
+                description: `المنصة المستهدفة. يجب أن تكون حصراً واحدة من الخيارات المحددة: ${platformsStr}`,
               },
               type: {
                 type: Type.STRING,
-                description: "نوع المحتوى: static_post أو reel_idea أو video_script",
+                description: `نوع المحتوى. يجب أن يكون حصراً واحداً من الخيارات المحددة: ${contentTypesStr}`,
               },
               title: {
                 type: Type.STRING,
@@ -117,7 +214,7 @@ app.post('/api/generate-plan', async (req, res) => {
     res.json({ plan });
   } catch (error: any) {
     console.error('Error generating plan:', error);
-    res.status(500).json({ error: error.message || 'حدث خطأ أثناء توليد خطة الـ 30 يوماً.' });
+    res.status(500).json({ error: cleanErrorMessage(error) });
   }
 });
 
@@ -248,7 +345,7 @@ app.post('/api/generate-content', async (req, res) => {
     res.json({ content: contentDetails });
   } catch (error: any) {
     console.error('Error generating content details:', error);
-    res.status(500).json({ error: error.message || 'حدث خطأ أثناء توليد تفاصيل المنشور.' });
+    res.status(500).json({ error: cleanErrorMessage(error) });
   }
 });
 
